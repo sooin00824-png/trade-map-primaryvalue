@@ -174,7 +174,7 @@ st.markdown("### 🔍 Reporter 국가 수입금액(단위: USD 등)")
 if view_mode == "월별":
     display_cols = ['cmdcode', 'period', 'reporterdesc', 'partnerdesc', 'primaryvalue']
 else:
-    display_cols = ['partnerdesc', 'partner_iso3', 'primaryvalue']
+    display_cols = ['cmdcode', 'reporterdesc', 'partnerdesc', 'primaryvalue']
 
 subset_display = subset.reindex(columns=[c for c in display_cols if c in subset.columns])
 st.dataframe(subset_display, hide_index=True, use_container_width=True)
@@ -187,5 +187,6 @@ st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
 st.caption("Author: Soo In Kim, Date: 2025.10.30")
 st.caption("주1) 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됨 (값이 클수록 진한 색)")
 st.caption("주2) '선택한 조건에 해당하는 데이터가 없습니다'가 표시되면, 다른 품목코드·기간·국가 조합을 선택하세요.")
+
 
 
