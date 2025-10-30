@@ -1,5 +1,5 @@
 # ================================================
-# 🌍 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반, 컬럼 수정 반영)
+# 🌍 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반, 개선 통합 버전)
 # ================================================
 
 import streamlit as st
@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import pycountry
-import os
 import pathlib
 
 # ------------------------------
@@ -21,18 +20,22 @@ st.title("🌐 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반)")
 # ------------------------------
 @st.cache_data
 def load_data():
+    # CSV 자동 경로 (같은 폴더 내)
     csv_path = pathlib.Path(__file__).parent / "dataset_filtered_80.csv"
-    st.write("🔍 불러오는 경로:", csv_path)
-    data = pd.read_csv(csv_path, encoding="utf-8-sig")
-    return data
 
-    if not os.path.exists(csv_path):
+    if not csv_path.exists():
         st.error(f"❌ 데이터 파일을 찾을 수 없습니다:\n{csv_path}")
         st.stop()
 
+    st.success(f"📂 불러오는 경로: {csv_path.name}")
+
+    # 데이터 불러오기
     data = pd.read_csv(csv_path, encoding="utf-8-sig")
 
-    # 열 이름 정리
+    # ----------------------------
+    # 🔧 기본 전처리
+    # ----------------------------
+    # 열 이름 표준화
     data.columns = (
         data.columns
         .str.strip()
@@ -40,35 +43,42 @@ def load_data():
         .str.replace('\ufeff', '', regex=False)
     )
 
-    # 주요 열 정리
+    # 문자열 컬럼 정리
     for col in ['period', 'cmdcode', 'reporterdesc', 'partnerdesc']:
         if col in data.columns:
             data[col] = data[col].astype(str).str.strip()
 
-    # 연도 컬럼 추가
+    # period 형식 정리 (예: 2010-01 → 201001)
+    if 'period' in data.columns:
+        data['period'] = (
+            data['period']
+            .astype(str)
+            .str.replace('-', '', regex=True)
+            .str.strip()
+        )
+
+    # year 컬럼 추가
     if 'period' in data.columns:
         data['year'] = data['period'].astype(str).str[:4]
+
+    # primaryvalue 숫자 변환
+    if 'primaryvalue' in data.columns:
+        data['primaryvalue'] = (
+            data['primaryvalue']
+            .astype(str)
+            .str.replace(',', '', regex=True)
+            .replace('', np.nan)
+            .astype(float)
+        )
 
     return data
 
 data = load_data()
 
 # ------------------------------
-# ✅ 2. 수치 컬럼 (primaryvalue) 처리
-# ------------------------------
-data['primaryvalue'] = (
-    data['primaryvalue']
-    .astype(str)
-    .str.replace(',', '', regex=True)
-    .replace('', np.nan)
-    .astype(float)
-)
-
-# ------------------------------
-# ✅ 3. ISO 코드 변환
+# ✅ 2. ISO 코드 변환
 # ------------------------------
 def country_to_iso3(name):
-    """국가명을 ISO3 코드로 변환"""
     try:
         return pycountry.countries.lookup(name).alpha_3
     except LookupError:
@@ -89,14 +99,15 @@ country_fix = {
     'China, Hong Kong SAR': 'HKG'  # ✅ 홍콩 수정 반영
 }
 
-data['partner_iso3'] = data['partnerdesc'].apply(
-    lambda x: country_fix[x] if x in country_fix else country_to_iso3(x)
-)
+if 'partnerdesc' in data.columns:
+    data['partner_iso3'] = data['partnerdesc'].apply(
+        lambda x: country_fix[x] if x in country_fix else country_to_iso3(x)
+    )
 
 data = data.dropna(subset=['partner_iso3', 'primaryvalue'])
 
 # ------------------------------
-# ✅ 4. Streamlit UI
+# ✅ 3. Streamlit UI
 # ------------------------------
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -112,7 +123,7 @@ if view_mode == "연도별":
     year = st.selectbox("📆 연도(YYYY)", sorted(data['year'].unique()))
 
 # ------------------------------
-# ✅ 5. 데이터 필터링
+# ✅ 4. 데이터 필터링
 # ------------------------------
 if view_mode == "월별":
     subset = data[
@@ -131,10 +142,10 @@ else:
     title_text = f"{reporter}의 {cmdcode} 수입 (연도: {year}) [log₁₀(primaryvalue)]"
 
 # ------------------------------
-# ✅ 6. 지도 시각화
+# ✅ 5. 지도 시각화
 # ------------------------------
 if subset.empty:
-    st.warning("⚠️ 선택한 조건에 해당하는 데이터가 없습니다.")
+    st.warning("⚠️ 선택한 조건에 해당하는 데이터가 없습니다. (기간/품목코드/국가 확인)")
 else:
     subset['primaryvalue_log'] = np.log10(subset['primaryvalue'].replace(0, np.nan))
 
@@ -143,7 +154,7 @@ else:
         locations="partner_iso3",
         color="primaryvalue_log",
         hover_name="partnerdesc",
-        color_continuous_scale="Viridis",
+        color_continuous_scale="Viridis_r",  # 🔄 값이 클수록 진한 색
         title=title_text,
         projection="natural earth"
     )
@@ -156,7 +167,7 @@ else:
     st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------
-# ✅ 7. 데이터 테이블 출력
+# ✅ 6. 데이터 테이블 출력
 # ------------------------------
 st.markdown("### 🔍 Reporter 국가 수입금액(단위: USD 등)")
 if view_mode == "월별":
@@ -167,10 +178,11 @@ else:
 subset_display = subset.reindex(columns=[c for c in display_cols if c in subset.columns])
 st.dataframe(subset_display, hide_index=True, use_container_width=True)
 
+# ------------------------------
+# ✅ 7. 부가 정보
+# ------------------------------
 st.markdown("---")
 st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
 st.caption("Author: Soo In Kim, Date: 2025.10.30")
-st.caption("주: 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됩니다.")
-
-
-
+st.caption("주1) 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됨 (값이 클수록 진한 색)")
+st.caption("주2) '선택한 조건에 해당하는 데이터가 없습니다'가 표시되면, 다른 품목코드·기간·국가 조합을 선택하세요.")
