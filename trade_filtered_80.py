@@ -18,19 +18,20 @@ st.title("🌐 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반)")
 # ------------------------------
 # ✅ 1. 데이터 불러오기
 # ------------------------------
-@st.cache_data
+    @st.cache_data
 def load_data():
-    # CSV 자동 경로 (같은 폴더 내)
-    csv_path = pathlib.Path(__file__).parent / "dataset_filtered_80.csv"
+    import gdown
 
-    if not csv_path.exists():
-        st.error(f"❌ 데이터 파일을 찾을 수 없습니다:\n{csv_path}")
-        st.stop()
+    # Google Drive 파일 URL → 직접 다운로드용 URL로 변환
+    url = "https://drive.google.com/uc?id=1WtkYFRNwlURmXJbLCsd4Ff0-GmtQoSHa"
+    output = "dataset_filtered_80.csv"
 
-    st.success(f"📂 불러오는 경로: {csv_path.name}")
+    # gdown으로 다운로드
+    st.info("📥 Google Drive에서 데이터 불러오는 중...")
+    gdown.download(url, output, quiet=False)
 
-    # 데이터 불러오기
-    data = pd.read_csv(csv_path, encoding="utf-8-sig")
+    # 불러온 CSV 읽기
+    data = pd.read_csv(output, encoding="utf-8-sig")
 
     # ----------------------------
     # 🔧 기본 전처리
@@ -186,3 +187,4 @@ st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
 st.caption("Author: Soo In Kim, Date: 2025.10.30")
 st.caption("주1) 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됨 (값이 클수록 진한 색)")
 st.caption("주2) '선택한 조건에 해당하는 데이터가 없습니다'가 표시되면, 다른 품목코드·기간·국가 조합을 선택하세요.")
+
