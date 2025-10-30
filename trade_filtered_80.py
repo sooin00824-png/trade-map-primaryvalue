@@ -8,6 +8,7 @@ import numpy as np
 import plotly.express as px
 import pycountry
 import os
+import pathlib
 
 # ------------------------------
 # ✅ Streamlit 기본 설정
@@ -20,8 +21,10 @@ st.title("🌐 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반)")
 # ------------------------------
 @st.cache_data
 def load_data():
-    csv_path = r"C:\Users\sooinkim\coding_working\dataset_filtered_80.csv"
-
+    csv_path = pathlib.Path(__file__).parent / "dataset_filtered_80.csv"
+    st.write("🔍 불러오는 경로:", csv_path)
+    data = pd.read_csv(csv_path, encoding="utf-8-sig")
+    return data
 
     if not os.path.exists(csv_path):
         st.error(f"❌ 데이터 파일을 찾을 수 없습니다:\n{csv_path}")
@@ -168,5 +171,6 @@ st.markdown("---")
 st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
 st.caption("Author: Soo In Kim, Date: 2025.10.30")
 st.caption("주: 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됩니다.")
+
 
 
