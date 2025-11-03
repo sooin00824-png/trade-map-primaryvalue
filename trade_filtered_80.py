@@ -154,8 +154,6 @@ hs_desc = {
     '260500': '(코발트) 코발트광 및 그 정광 (Cobalt ores and concentrates)',
     '282200': '(코발트) 산화코발트 및 수산화코발트; 상업용 산화코발트 (Cobalt oxides and hydroxides; commercial cobalt oxides)',
     '810520': '(코발트) 코발트 매트 및 기타 코발트 야금 중간제품 (Cobalt mattes and other intermediate products of cobalt metallurgy)'
-}
-
     
 }
 
@@ -210,6 +208,7 @@ st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
 st.caption("Author: KEEI, Date: 2025.10.30")
 st.caption("주1) 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됨 (값이 클수록 진한 색)")
 st.caption("주2) '선택한 조건에 해당하는 데이터가 없습니다'가 표시되면, 다른 품목코드·기간·국가 조합을 선택하세요.")
+
 
 
 
