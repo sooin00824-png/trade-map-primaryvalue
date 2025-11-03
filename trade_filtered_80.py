@@ -1,5 +1,5 @@
 # ================================================
-# 🌍 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반, 개선 통합 버전)
+# 🌍 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반, 로그 제외 버전)
 # ================================================
 
 import streamlit as st
@@ -22,19 +22,12 @@ st.title("🌐 리튬 및 코발트 국제 교역 지도 (primaryvalue 기반)")
 def load_data():
     import gdown
 
-    # Google Drive 파일 URL → 직접 다운로드용 URL로 변환
     url = "https://drive.google.com/uc?id=1WtkYFRNwlURmXJbLCsd4Ff0-GmtQoSHa"
     output = "dataset_filtered_80.csv"
-
-    # gdown으로 다운로드
     gdown.download(url, output, quiet=False)
 
-    # 불러온 CSV 읽기
     data = pd.read_csv(output, encoding="utf-8-sig")
 
-    # ----------------------------
-    # 🔧 기본 전처리
-    # ----------------------------
     # 열 이름 표준화
     data.columns = (
         data.columns
@@ -43,12 +36,10 @@ def load_data():
         .str.replace('\ufeff', '', regex=False)
     )
 
-    # 문자열 컬럼 정리
     for col in ['period', 'cmdcode', 'reporterdesc', 'partnerdesc']:
         if col in data.columns:
             data[col] = data[col].astype(str).str.strip()
 
-    # period 형식 정리 (예: 2010-01 → 201001)
     if 'period' in data.columns:
         data['period'] = (
             data['period']
@@ -56,12 +47,8 @@ def load_data():
             .str.replace('-', '', regex=True)
             .str.strip()
         )
-
-    # year 컬럼 추가
-    if 'period' in data.columns:
         data['year'] = data['period'].astype(str).str[:4]
 
-    # primaryvalue 숫자 변환
     if 'primaryvalue' in data.columns:
         data['primaryvalue'] = (
             data['primaryvalue']
@@ -96,7 +83,7 @@ country_fix = {
     'Other Asia, nes': 'OWA',
     'Palestine': 'PSE', 'Kosovo': 'XKX', 'Taiwan': 'TWN',
     'Czechia': 'CZE', 'Dominican Rep.': 'DOM',
-    'China, Hong Kong SAR': 'HKG'  # ✅ 홍콩 수정 반영
+    'China, Hong Kong SAR': 'HKG'
 }
 
 if 'partnerdesc' in data.columns:
@@ -131,7 +118,7 @@ if view_mode == "월별":
         (data['cmdcode'] == str(cmdcode)) &
         (data['reporterdesc'] == reporter)
     ].copy()
-    title_text = f"{reporter}의 {cmdcode} 수입 (기간: {period}) [log₁₀(primaryvalue)]"
+    title_text = f"{reporter}의 {cmdcode} 수입 (기간: {period}) [primaryvalue]"
 else:
     subset = data[
         (data['year'] == str(year)) &
@@ -139,22 +126,21 @@ else:
         (data['reporterdesc'] == reporter)
     ].copy()
     subset = subset.groupby(['partnerdesc', 'partner_iso3'], as_index=False)['primaryvalue'].sum()
-    title_text = f"{reporter}의 {cmdcode} 수입 (연도: {year}) [log₁₀(primaryvalue)]"
+    title_text = f"{reporter}의 {cmdcode} 수입 (연도: {year}) [primaryvalue]"
 
 # ------------------------------
 # ✅ 4. HS 코드 설명
 # ------------------------------
 hs_desc = {
-    '253090': '(리튬) 비소 황화물, 명반석, 포촐라나, 천연 색토 및 기타 광물질 (Arsenic sulfides, alunite, pozzuolana, earth colours and other mineral substances, n.e.s.)',
+    '253090': '(리튬) 비소 황화물, 명반석, 포촐라나, 천연 색토 및 기타 광물질',
     '283691': '(리튬) 탄산리튬 (Lithium carbonates)',
     '282520': '(리튬) 산화리튬 및 수산화리튬 (Lithium oxide and hydroxide)',
-    '282739': '(리튬) 염화물(단, 염화암모늄·염화칼슘·염화마그네슘·염화알루미늄·염화니켈·염화수은 제외) (Chlorides (excl. ammonium, calcium, magnesium, aluminium, nickel, and mercury chloride))',
-    '282690': '(리튬) 규불화염, 알루미늄불화염 및 기타 복합 불소화합염 (Fluorosilicates, fluoroaluminates and other complex fluorine salts)',
-    '282619': '(리튬) 불화물(단, 알루미늄 및 수은의 불화물 제외) (Fluorides (excl. of aluminium and mercury))',
-    '260500': '(코발트) 코발트광 및 그 정광 (Cobalt ores and concentrates)',
-    '282200': '(코발트) 산화코발트 및 수산화코발트; 상업용 산화코발트 (Cobalt oxides and hydroxides; commercial cobalt oxides)',
-    '810520': '(코발트) 코발트 매트 및 기타 코발트 야금 중간제품 (Cobalt mattes and other intermediate products of cobalt metallurgy)'
-    
+    '282739': '(리튬) 염화물(특정 염 제외)',
+    '282690': '(리튬) 규불화염, 알루미늄불화염 및 기타 복합 불소화합염',
+    '282619': '(리튬) 불화물(단, 알루미늄 및 수은 제외)',
+    '260500': '(코발트) 코발트광 및 정광',
+    '282200': '(코발트) 산화·수산화코발트',
+    '810520': '(코발트) 코발트 매트 및 기타 야금 중간제품'
 }
 
 if cmdcode in hs_desc:
@@ -162,28 +148,25 @@ if cmdcode in hs_desc:
 else:
     st.warning("❗ 해당 HS 코드의 설명 정보가 등록되어 있지 않습니다.")
 
-
 # ------------------------------
 # ✅ 5. 지도 시각화
 # ------------------------------
 if subset.empty:
     st.warning("⚠️ 선택한 조건에 해당하는 데이터가 없습니다. (기간/품목코드/국가 확인)")
 else:
-    subset['primaryvalue_log'] = np.log10(subset['primaryvalue'].replace(0, np.nan))
-
     fig = px.choropleth(
         subset,
         locations="partner_iso3",
-        color="primaryvalue_log",
+        color="primaryvalue",  # ✅ 로그 대신 원래 값 사용
         hover_name="partnerdesc",
-        color_continuous_scale="Viridis_r",  # 🔄 값이 클수록 진한 색
+        color_continuous_scale="Viridis_r",
         title=title_text,
         projection="natural earth"
     )
 
     fig.update_layout(
         geo=dict(showframe=False, showcoastlines=True),
-        coloraxis_colorbar=dict(title="log₁₀(primaryvalue)")
+        coloraxis_colorbar=dict(title="primaryvalue")  # ✅ 색상 범례 수정
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -191,28 +174,4 @@ else:
 # ------------------------------
 # ✅ 6. 데이터 테이블 출력
 # ------------------------------
-st.markdown("### 🔍 Reporter 국가 수입금액(단위: USD 등)")
-if view_mode == "월별":
-    display_cols = ['cmdcode', 'period', 'reporterdesc', 'partnerdesc', 'primaryvalue']
-else:
-    display_cols = ['cmdcode', 'reporterdesc', 'partnerdesc', 'primaryvalue']
-
-subset_display = subset.reindex(columns=[c for c in display_cols if c in subset.columns])
-st.dataframe(subset_display, hide_index=True, use_container_width=True)
-
-# ------------------------------
-# ✅ 7. 부가 정보
-# ------------------------------
-st.markdown("---")
-st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
-st.caption("Author: KEEI, Date: 2025.10.30")
-st.caption("주1) 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됨 (값이 클수록 진한 색)")
-st.caption("주2) '선택한 조건에 해당하는 데이터가 없습니다'가 표시되면, 다른 품목코드·기간·국가 조합을 선택하세요.")
-
-
-
-
-
-
-
-
+st.markdown("
