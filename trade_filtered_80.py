@@ -142,6 +142,27 @@ else:
     title_text = f"{reporter}의 {cmdcode} 수입 (연도: {year}) [log₁₀(primaryvalue)]"
 
 # ------------------------------
+# ✅ 4. HS 코드 설명
+# ------------------------------
+hs_desc = {
+    '253090': 'Arsenic sulfides, alunite, pozzuolana, earth colours and other mineral substances, n.e.s.',
+    '283691': 'Lithium carbonates',
+    '282520': 'Lithium oxide and hydroxide',
+    '282739': 'Chlorides (excl. ammonium, calcium, magnesium, aluminium, nickel, and mercury chloride)',
+    '282690': 'Fluorosilicates, fluoroaluminates and other complex fluorine salts',
+    '282619': 'Fluorides (excl. of aluminium and mercury)',
+    '260500': 'Cobalt ores and concentrates',
+    '282200': 'Cobalt oxides and hydroxides; commercial cobalt oxides',
+    '810520': 'Cobalt mattes and other intermediate products of cobalt metallurgy'
+}
+
+if cmdcode in hs_desc:
+    st.info(f"🧾 **HS 코드 {cmdcode} 설명:** {hs_desc[cmdcode]}")
+else:
+    st.warning("❗ 해당 HS 코드의 설명 정보가 등록되어 있지 않습니다.")
+
+
+# ------------------------------
 # ✅ 5. 지도 시각화
 # ------------------------------
 if subset.empty:
@@ -186,6 +207,7 @@ st.caption("📊 Source: UN COMTRADE Database (로컬 데이터 기반)")
 st.caption("Author: KEEI, Date: 2025.10.30")
 st.caption("주1) 지도 색상은 log₁₀(primaryvalue) 기준으로 표시됨 (값이 클수록 진한 색)")
 st.caption("주2) '선택한 조건에 해당하는 데이터가 없습니다'가 표시되면, 다른 품목코드·기간·국가 조합을 선택하세요.")
+
 
 
 
